@@ -6,7 +6,7 @@
   "main": "dist/index.js",
   "scripts": {
     "test": "jest --coverage",
-    "build": "ncc build src/main.ts",
+    "build": "ncc build src/main.ts -m",
     "lint": "eslint **/*.ts --cache"
   },
   "repository": {
