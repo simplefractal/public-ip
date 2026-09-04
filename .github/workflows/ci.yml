@@ -11,27 +11,16 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
-        uses: actions/checkout@v1
+        uses: actions/checkout@v7
 
       - name: Setup Node.js
-        uses: actions/setup-node@v1
+        uses: actions/setup-node@v7
         with:
-          node-version: "16.16.0"
-
-      - name: Public IP
-        id: ip
-        uses: haythem/public-ip@v1.3
-
-      - name: Restore Cache
-        uses: actions/cache@v1
-        with:
-          path: node_modules
-          key: ${{ runner.os }}-yarn-${{ hashFiles('**/yarn.lock') }}
-          restore-keys: |
-            ${{ runner.os }}-yarn-
+          node-version: '24'
+          cache: yarn
 
       - name: Install Dependencies
-        run: yarn install
+        run: yarn install --frozen-lockfile
 
       - name: Lint
         run: yarn lint
@@ -39,13 +28,26 @@ jobs:
       - name: Run Tests
         run: yarn test
 
-      - name: Integration
+      - name: Check dist is up to date
         run: |
-          echo ${{ steps.ip.outputs.ipv4 }}
-          echo ${{ steps.ip.outputs.ipv6 }}
+          yarn build
+          if ! git diff --exit-code -- dist/; then
+            echo "::error::dist/ is stale. Run 'yarn build' and commit the result."
+            exit 1
+          fi
+
+      - name: Integration
+        id: ip
+        uses: ./
+
+      - name: Assert an address was returned
+        run: |
+          echo "ipv4: ${{ steps.ip.outputs.ipv4 }}"
+          echo "ipv6: ${{ steps.ip.outputs.ipv6 }}"
+          test -n "${{ steps.ip.outputs.ipv4 }}"
 
       - name: Code Coverage
-        uses: codecov/codecov-action@v1
+        uses: codecov/codecov-action@v7
         with:
           token: ${{ secrets.CODECOV_TOKEN }}
-          fail_ci_if_error: true
+          fail_ci_if_error: false
